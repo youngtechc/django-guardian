@@ -24,9 +24,9 @@ settings.INSTALLED_APPS = (
 
 def run_tests(settings):
     from django.test.utils import get_runner
-    from utils import show_db_config
+    from utils import show_settings
 
-    show_db_config(settings, 'tests')
+    show_settings(settings, 'tests')
 
     TestRunner = get_runner(settings)
     test_runner = TestRunner(interactive=False)

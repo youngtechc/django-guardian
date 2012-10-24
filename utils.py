@@ -1,6 +1,11 @@
 
-def show_db_config(settings, action):
+def show_settings(settings, action):
+    import guardian
     from django.utils.termcolors import colorize
+
+    guardian_path = guardian.__path__[0]
+    msg = "django-guardian module's path: %r" % guardian_path
+    print colorize(msg, fg='magenta')
     db_conf = settings.DATABASES['default']
     output = []
     msg = "Starting %s for db backend: %s" % (action, db_conf['ENGINE'])

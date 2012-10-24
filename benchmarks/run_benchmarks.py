@@ -3,9 +3,19 @@ import datetime
 import os
 import random
 import string
+import sys
 
-os.environ["DJANGO_SETTINGS_MODULE"] = 'guardian.testsettings'
-from guardian import testsettings as settings
+abspath = lambda *p: os.path.abspath(os.path.join(*p))
+
+THIS_DIR = abspath(os.path.dirname(__file__))
+ROOT_DIR = abspath(THIS_DIR, '..')
+
+# so the preferred guardian module is one within this repo and
+# not system-wide
+sys.path.insert(0, ROOT_DIR)
+
+os.environ["DJANGO_SETTINGS_MODULE"] = 'benchmarks.settings'
+from benchmarks import settings
 from guardian.shortcuts import assign
 
 settings.DJALOG_LEVEL = 40
@@ -18,13 +28,13 @@ settings.INSTALLED_APPS = (
     'guardian',
 )
 
-from utils import show_db_config
-from django.contrib.auth.models import User, Group
+from utils import show_settings
+from django.contrib.auth.models import User
+from benchmarks.models import TestModel
 
-NUM_OBJECTS=1000000
-NUM_USERS=10000
-NUM_PERMS_PER_USER=1000
-
+USERS_COUNT = 20
+OBJECTS_COUNT = 100
+OBJECTS_WIHT_PERMS_COUNT = 100
 
 def random_string(length=25, chars=string.ascii_letters+string.digits):
     return ''.join(random.choice(chars) for i in range(length))
@@ -74,8 +84,8 @@ class Benchmark(object):
         self.objects_count = objects_count
         self.objects_with_perms_count = objects_with_perms_count
         
-        self.Model = Group
-        self.perm = 'auth.change_group'
+        self.Model = TestModel
+        self.perm = 'auth.change_testmodel'
 
     def prepare_db(self):
         from django.core.management import call_command
@@ -124,8 +134,8 @@ class Benchmark(object):
 
 
 def main():
-    show_db_config(settings, 'benchmarks')
-    benchmark = Benchmark(10, 100, 100)
+    show_settings(settings, 'benchmarks')
+    benchmark = Benchmark(USERS_COUNT, OBJECTS_COUNT, OBJECTS_WIHT_PERMS_COUNT)
     benchmark.main()
 
 

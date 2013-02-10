@@ -342,8 +342,6 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
         if ctype.model_class() != queryset.model:
             raise MixedContentTypeError("Content type for given perms and "
                 "klass differs")
-    #if klass is None:
-        #klass = ctype.model_class()
 
     # At this point, we should have both ctype and queryset and they should
     # match which means: ctype.model_class() == queryset.model
@@ -354,7 +352,7 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
         return queryset
 
     # Now we should extract list of pk values for which we would filter queryset
-    user_model = get_user_obj_perms_model(klass or ctype.model_class())
+    user_model = get_user_obj_perms_model(queryset.model)
     user_obj_perms_queryset = (user_model.objects
         .filter(user=user)
         .filter(permission__content_type=ctype)

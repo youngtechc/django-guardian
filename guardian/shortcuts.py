@@ -183,9 +183,16 @@ def get_users_with_perms(obj, attach_perms=False, with_superusers=False,
     if not attach_perms:
         # It's much easier without attached perms so we do it first if that is
         # the case
-        qset = Q(
-            userobjectpermission__content_type=ctype,
-            userobjectpermission__object_pk=obj.pk)
+        user_model = get_user_obj_perms_model(obj)
+        related_name = user_model.user.field.related_query_name()
+        if user_model.objects.is_generic():
+            user_filters = {
+                '%s__content_type' % related_name: ctype,
+                '%s__object_pk' % related_name: obj.pk,
+            }
+        else:
+            user_filters = {'%s__content_object' % related_name: obj}
+        qset = Q(**user_filters)
         if with_group_users:
             qset = qset | Q(
                 groups__groupobjectpermission__content_type=ctype,
@@ -335,6 +342,8 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
         if ctype.model_class() != queryset.model:
             raise MixedContentTypeError("Content type for given perms and "
                 "klass differs")
+    #if klass is None:
+        #klass = ctype.model_class()
 
     # At this point, we should have both ctype and queryset and they should
     # match which means: ctype.model_class() == queryset.model
@@ -345,11 +354,16 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
         return queryset
 
     # Now we should extract list of pk values for which we would filter queryset
-    user_obj_perms = UserObjectPermission.objects\
-        .filter(user=user)\
-        .filter(permission__content_type=ctype)\
-        .filter(permission__codename__in=codenames)\
-        .values_list('object_pk', 'permission__codename')
+    user_model = get_user_obj_perms_model(klass or ctype.model_class())
+    user_obj_perms_queryset = (user_model.objects
+        .filter(user=user)
+        .filter(permission__content_type=ctype)
+        .filter(permission__codename__in=codenames))
+    if user_model.objects.is_generic():
+        fields = ['object_pk', 'permission__codename']
+    else:
+        fields = ['content_object__pk', 'permission__codename']
+    user_obj_perms = user_obj_perms_queryset.values_list(*fields)
     data = list(user_obj_perms)
     if use_groups:
         groups_obj_perms = GroupObjectPermission.objects\

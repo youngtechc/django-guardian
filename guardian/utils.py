@@ -10,6 +10,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.models import User, AnonymousUser, Group
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.db.models import Model
 from django.http import HttpResponseForbidden, HttpResponseRedirect
@@ -149,6 +150,7 @@ def get_user_obj_perms_model(obj):
     from guardian.models import UserObjectPermission
     if isinstance(obj, Model):
         obj = obj.__class__
+    ctype = ContentType.objects.get_for_model(obj)
     for name in dir(obj):
         try:
             attr = getattr(obj, name)
@@ -159,6 +161,12 @@ def get_user_obj_perms_model(obj):
             model = getattr(related, 'model', None)
             if (model and issubclass(model, UserObjectPermissionBase) and
                     model is not UserObjectPermission):
-                return model
+                # if model is generic one it would be returned anyway
+                if not model.objects.is_generic():
+                    # make sure that content_object's content_type is same as
+                    # the one of given obj
+                    fk = model._meta.get_field_by_name('content_object')[0]
+                    if ctype == ContentType.objects.get_for_model(fk.rel.to):
+                        return model
     return UserObjectPermission
 

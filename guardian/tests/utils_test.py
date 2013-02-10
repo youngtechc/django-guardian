@@ -56,10 +56,9 @@ class GetUserObjPermsModelTest(TestCase):
         self.assertEqual(get_user_obj_perms_model(ContentType),
             UserObjectPermission)
 
-    # TODO: Fix following test
-    #def test_user_model(self):
-        ## this test assumes that there were no direct obj perms model to User
-        ## model defined (i.e. while testing guardian app in some custom project)
-        #self.assertEqual(get_user_obj_perms_model(User),
-            #UserObjectPermission)
+    def test_user_model(self):
+        # this test assumes that there were no direct obj perms model to User
+        # model defined (i.e. while testing guardian app in some custom project)
+        self.assertEqual(get_user_obj_perms_model(User),
+            UserObjectPermission)
 

@@ -4,7 +4,15 @@ from django.contrib.contenttypes.models import ContentType
 
 from guardian.exceptions import ObjectNotPersisted
 
+
 class UserObjectPermissionManager(models.Manager):
+
+    def is_generic(self):
+        try:
+            self.model._meta.get_field('object_pk')
+            return True
+        except models.fields.FieldDoesNotExist:
+            return False
 
     def assign(self, perm, user, obj):
         """
@@ -18,11 +26,14 @@ class UserObjectPermissionManager(models.Manager):
         permission = Permission.objects.get(
             content_type=ctype, codename=perm)
 
-        obj_perm, created = self.get_or_create(
-            content_type = ctype,
-            permission = permission,
-            object_pk = obj.pk,
-            user = user)
+        kwargs = {'permission': permission, 'user': user}
+        if self.is_generic():
+            self.model._meta.get_field('object_pk')
+            kwargs['content_type'] = ctype
+            kwargs['object_pk'] = obj.pk
+        else:
+            kwargs['content_object'] = obj
+        obj_perm, created = self.get_or_create(**kwargs)
         return obj_perm
 
     def remove_perm(self, perm, user, obj):
@@ -32,12 +43,16 @@ class UserObjectPermissionManager(models.Manager):
         if getattr(obj, 'pk', None) is None:
             raise ObjectNotPersisted("Object %s needs to be persisted first"
                 % obj)
-        self.filter(
-            permission__codename=perm,
-            user=user,
-            object_pk=obj.pk,
-            content_type=ContentType.objects.get_for_model(obj))\
-            .delete()
+        filters = {
+            'permission__codename': perm,
+            'permission__content_type': ContentType.objects.get_for_model(obj),
+            'user': user,
+        }
+        if self.is_generic():
+            filters['object_pk'] = obj.pk
+        else:
+            filters['content_object__pk'] = obj.pk
+        self.filter(**filters).delete()
 
     def get_for_object(self, user, obj):
         if getattr(obj, 'pk', None) is None:

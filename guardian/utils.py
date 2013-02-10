@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.models import User, AnonymousUser, Group
 from django.core.exceptions import PermissionDenied
+from django.db.models import Model
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext, TemplateDoesNotExist
@@ -134,4 +135,30 @@ def clean_orphan_obj_perms():
     logger.info("Total removed orphan object permissions instances: %d" %
         deleted)
     return deleted
+
+
+class ClassProperty(property):
+    def __get__(self, cls, owner):
+        return self.fget.__get__(None, owner)()
+
+
+# TODO: should raise error when multiple UserObjectPermission direct relations
+# are defined
+def get_user_obj_perms_model(obj):
+    from guardian.models import UserObjectPermissionBase
+    from guardian.models import UserObjectPermission
+    if isinstance(obj, Model):
+        obj = obj.__class__
+    for name in dir(obj):
+        try:
+            attr = getattr(obj, name)
+        except (ValueError, AttributeError):
+            continue
+        if hasattr(attr, 'related'):
+            related = attr.related
+            model = getattr(related, 'model', None)
+            if (model and issubclass(model, UserObjectPermissionBase) and
+                    model is not UserObjectPermission):
+                return model
+    return UserObjectPermission
 

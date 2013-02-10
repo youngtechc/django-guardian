@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q, F
 
 from guardian.utils import get_identity
+from guardian.utils import get_user_obj_perms_model
 
 class ObjectPermissionChecker(object):
     """
@@ -65,12 +66,21 @@ class ObjectPermissionChecker(object):
                     .filter(content_type=ctype)
                     .values_list("codename")))
             elif self.user:
+                model = get_user_obj_perms_model(obj)
+                related_name = model.permission.field.related_query_name()
+                user_filters = {'%s__user' % related_name: self.user}
+                if model.objects.is_generic():
+                    user_filters.update({
+                        '%s__content_type' % related_name: F('content_type'),
+                        '%s__object_pk' % related_name: obj.pk,
+                    })
+                else:
+                    user_filters['%s__content_object' % related_name] = obj
+
                 perms = list(set(chain(*Permission.objects
                     .filter(content_type=ctype)
                     .filter(
-                        Q(userobjectpermission__content_type=F('content_type'),
-                            userobjectpermission__user=self.user,
-                            userobjectpermission__object_pk=obj.pk) |
+                        Q(**user_filters) |
                         Q(groupobjectpermission__content_type=F('content_type'),
                             groupobjectpermission__group__user=self.user,
                             groupobjectpermission__object_pk=obj.pk))

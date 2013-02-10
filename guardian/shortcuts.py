@@ -11,6 +11,7 @@ from guardian.exceptions import MixedContentTypeError
 from guardian.exceptions import WrongAppError
 from guardian.models import UserObjectPermission, GroupObjectPermission
 from guardian.utils import get_identity
+from guardian.utils import get_user_obj_perms_model
 from itertools import groupby
 
 def assign(perm, user_or_group, obj=None):
@@ -78,7 +79,8 @@ def assign(perm, user_or_group, obj=None):
             return perm
     perm = perm.split('.')[-1]
     if user:
-        return UserObjectPermission.objects.assign(perm, user, obj)
+        model = get_user_obj_perms_model(obj)
+        return model.objects.assign(perm, user, obj)
     if group:
         return GroupObjectPermission.objects.assign(perm, group, obj)
 
@@ -115,7 +117,8 @@ def remove_perm(perm, user_or_group=None, obj=None):
             return
     perm = perm.split('.')[-1]
     if user:
-        UserObjectPermission.objects.remove_perm(perm, user, obj)
+        model = get_user_obj_perms_model(obj)
+        model.objects.remove_perm(perm, user, obj)
     if group:
         GroupObjectPermission.objects.remove_perm(perm, group, obj)
 
@@ -252,7 +255,7 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
     permissions present at ``perms``.
 
     :param user: ``User`` instance for which objects would be returned
-    :param perms: single permission string, or sequence of permission strings 
+    :param perms: single permission string, or sequence of permission strings
       which should be checked.
       If ``klass`` parameter is not given, those should be full permission
       names rather than only codenames (i.e. ``auth.change_user``). If more than
@@ -280,16 +283,16 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
         >>> assign('auth.change_group', joe, group)
         >>> get_objects_for_user(joe, 'auth.change_group')
         [<Group some group>]
-        
+
     The permission string can also be an iterable. Continuing with the previous example:
-      
+
         >>> get_objects_for_user(joe, ['auth.change_group', 'auth.delete_group'])
         []
         >>> get_objects_for_user(joe, ['auth.change_group', 'auth.delete_group'], any_perm=True)
         [<Group some group>]
         >>> assign('auth.delete_group', joe, group)
         >>> get_objects_for_user(joe, ['auth.change_group', 'auth.delete_group'])
-        [<Group some group>]        
+        [<Group some group>]
 
     """
     if isinstance(perms, basestring):
@@ -372,7 +375,7 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False):
     permissions present at ``perms``.
 
     :param group: ``Group`` instance for which objects would be returned.
-    :param perms: single permission string, or sequence of permission strings 
+    :param perms: single permission string, or sequence of permission strings
       which should be checked.
       If ``klass`` parameter is not given, those should be full permission
       names rather than only codenames (i.e. ``auth.change_user``). If more than
@@ -388,9 +391,9 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False):
       ``klass``.
 
     Example:
-    
-    Let's assume we have a ``Task`` model belonging to the ``tasker`` app with 
-    the default add_task, change_task and delete_task permissions provided 
+
+    Let's assume we have a ``Task`` model belonging to the ``tasker`` app with
+    the default add_task, change_task and delete_task permissions provided
     by Django::
 
         >>> from guardian.shortcuts import get_objects_for_group
@@ -410,7 +413,7 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False):
         >>> assign('tasker.delete_task', group, task)
         >>> get_objects_for_group(group, ['tasker.add_task', 'tasker.delete_task'])
         [<Task some task>]
-                
+
     """
     if isinstance(perms, basestring):
         perms = [perms]

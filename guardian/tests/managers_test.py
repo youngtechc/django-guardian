@@ -1,14 +1,16 @@
+from .testapp.models import Mixed
+from .testapp.models import MixedGroupObjectPermission
 from .testapp.models import Project
-from .testapp.models import ProjectUserObjectPermission
 from .testapp.models import ProjectGroupObjectPermission
+from .testapp.models import ProjectUserObjectPermission
 from django.contrib.auth.models import User, Group, Permission
 from django.test import TestCase
 from guardian.shortcuts import assign
-from guardian.shortcuts import remove_perm
-from guardian.shortcuts import get_users_with_perms
 from guardian.shortcuts import get_groups_with_perms
-from guardian.shortcuts import get_objects_for_user
 from guardian.shortcuts import get_objects_for_group
+from guardian.shortcuts import get_objects_for_user
+from guardian.shortcuts import get_users_with_perms
+from guardian.shortcuts import remove_perm
 
 
 class TestDirectUserPermissions(TestCase):
@@ -163,4 +165,27 @@ class TestDirectGroupPermissions(TestCase):
 
         result = get_objects_for_group(self.group, 'testapp.add_project')
         self.assertEqual(sorted(p.pk for p in result), sorted([foo.pk, bar.pk]))
+
+
+class TestMixedDirectAndGenericObjectPermission(TestCase):
+
+    def setUp(self):
+        self.joe = User.objects.create_user('joe', 'joe@example.com', 'foobar')
+        self.group = Group.objects.create(name='admins')
+        self.group.user_set.add(self.joe)
+        self.mixed = Mixed.objects.create(name='Foobar')
+
+    def test_get_users_with_perms_plus_groups(self):
+        User.objects.create_user('john', 'john@foobar.com', 'john')
+        jane = User.objects.create_user('jane', 'jane@foobar.com', 'jane')
+        group = Group.objects.create(name='devs')
+        group.user_set.add(self.joe)
+        assign('add_mixed', self.joe, self.mixed)
+        assign('change_mixed', group, self.mixed)
+        assign('change_mixed', jane, self.mixed)
+        self.assertEqual(get_users_with_perms(self.mixed, attach_perms=True),
+            {
+                self.joe: ['add_mixed', 'change_mixed'],
+                jane: ['change_mixed'],
+            })
 

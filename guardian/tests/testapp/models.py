@@ -29,3 +29,17 @@ class Project(models.Model):
     def __unicode__(self):
         return self.name
 
+
+class MixedGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = models.ForeignKey('Mixed')
+
+
+class Mixed(models.Model):
+    """
+    Model for tests obj perms checks with generic user object permissions model
+    and direct group object permissions model.
+    """
+    name = models.CharField(max_length=128, unique=True)
+
+    def __unicode__(self):
+        return self.name

@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from guardian.exceptions import ObjectNotPersisted
 
+# TODO: consolidate UserObjectPermissionManager and GroupObjectPermissionManager
 
 class BaseObjectPermissionManager(models.Manager):
 

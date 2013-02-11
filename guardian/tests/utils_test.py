@@ -5,10 +5,13 @@ from django.contrib.auth.models import User, Group, AnonymousUser
 from guardian.tests.core_test import ObjectPermissionTestCase
 from guardian.tests.testapp.models import Project
 from guardian.tests.testapp.models import ProjectUserObjectPermission
+from guardian.tests.testapp.models import ProjectGroupObjectPermission
 from guardian.models import UserObjectPermission
+from guardian.models import GroupObjectPermission
 from guardian.utils import get_anonymous_user
 from guardian.utils import get_identity
 from guardian.utils import get_user_obj_perms_model
+from guardian.utils import get_group_obj_perms_model
 from guardian.exceptions import NotUserNorGroup
 
 class GetAnonymousUserTest(TestCase):
@@ -61,4 +64,26 @@ class GetUserObjPermsModelTest(TestCase):
         # model defined (i.e. while testing guardian app in some custom project)
         self.assertEqual(get_user_obj_perms_model(User),
             UserObjectPermission)
+
+
+class GetGroupObjPermsModelTest(TestCase):
+
+    def test_for_instance(self):
+        project = Project(name='Foobar')
+        self.assertEqual(get_group_obj_perms_model(project),
+            ProjectGroupObjectPermission)
+
+    def test_for_class(self):
+        self.assertEqual(get_group_obj_perms_model(Project),
+            ProjectGroupObjectPermission)
+
+    def test_default(self):
+        self.assertEqual(get_group_obj_perms_model(ContentType),
+            GroupObjectPermission)
+
+    def test_group_model(self):
+        # this test assumes that there were no direct obj perms model to Group
+        # model defined (i.e. while testing guardian app in some custom project)
+        self.assertEqual(get_group_obj_perms_model(Group),
+            GroupObjectPermission)
 

@@ -9,9 +9,9 @@ from django.shortcuts import _get_queryset
 from guardian.core import ObjectPermissionChecker
 from guardian.exceptions import MixedContentTypeError
 from guardian.exceptions import WrongAppError
-from guardian.models import UserObjectPermission, GroupObjectPermission
 from guardian.utils import get_identity
 from guardian.utils import get_user_obj_perms_model
+from guardian.utils import get_group_obj_perms_model
 from itertools import groupby
 
 def assign(perm, user_or_group, obj=None):
@@ -82,7 +82,8 @@ def assign(perm, user_or_group, obj=None):
         model = get_user_obj_perms_model(obj)
         return model.objects.assign(perm, user, obj)
     if group:
-        return GroupObjectPermission.objects.assign(perm, group, obj)
+        model = get_group_obj_perms_model(obj)
+        return model.objects.assign(perm, group, obj)
 
 def remove_perm(perm, user_or_group=None, obj=None):
     """
@@ -120,7 +121,8 @@ def remove_perm(perm, user_or_group=None, obj=None):
         model = get_user_obj_perms_model(obj)
         model.objects.remove_perm(perm, user, obj)
     if group:
-        GroupObjectPermission.objects.remove_perm(perm, group, obj)
+        model = get_group_obj_perms_model(obj)
+        model.objects.remove_perm(perm, group, obj)
 
 def get_perms(user_or_group, obj):
     """
@@ -194,10 +196,18 @@ def get_users_with_perms(obj, attach_perms=False, with_superusers=False,
             user_filters = {'%s__content_object' % related_name: obj}
         qset = Q(**user_filters)
         if with_group_users:
-            qset = qset | Q(
-                groups__groupobjectpermission__content_type=ctype,
-                groups__groupobjectpermission__object_pk=obj.pk,
-            )
+            group_model = get_group_obj_perms_model(obj)
+            group_rel_name = group_model.group.field.related_query_name()
+            if group_model.objects.is_generic():
+                group_filters = {
+                    'groups__%s__content_type' % group_rel_name: ctype,
+                    'groups__%s__object_pk' % group_rel_name: obj.pk,
+                }
+            else:
+                group_filters = {
+                    'groups__%s__content_object' % group_rel_name: obj,
+                }
+            qset = qset | Q(**group_filters)
         if with_superusers:
             qset = qset | Q(is_superuser=True)
         return User.objects.filter(qset).distinct()
@@ -241,12 +251,16 @@ def get_groups_with_perms(obj, attach_perms=False):
     if not attach_perms:
         # It's much easier without attached perms so we do it first if that is
         # the case
-        groups = Group.objects\
-            .filter(
-                groupobjectpermission__content_type=ctype,
-                groupobjectpermission__object_pk=obj.pk,
-            )\
-            .distinct()
+        group_model = get_group_obj_perms_model(obj)
+        group_rel_name = group_model.group.field.related_query_name()
+        if group_model.objects.is_generic():
+            group_filters = {
+                '%s__content_type' % group_rel_name: ctype,
+                '%s__object_pk' % group_rel_name: obj.pk,
+            }
+        else:
+            group_filters = {'%s__content_object' % group_rel_name: obj}
+        groups = Group.objects.filter(**group_filters).distinct()
         return groups
     else:
         # TODO: Do not hit db for each group!
@@ -364,11 +378,16 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
     user_obj_perms = user_obj_perms_queryset.values_list(*fields)
     data = list(user_obj_perms)
     if use_groups:
-        groups_obj_perms = GroupObjectPermission.objects\
-            .filter(group__user=user)\
-            .filter(permission__content_type=ctype)\
-            .filter(permission__codename__in=codenames)\
-            .values_list('object_pk', 'permission__codename')
+        group_model = get_group_obj_perms_model(queryset.model)
+        groups_obj_perms_queryset = (group_model.objects
+            .filter(group__user=user)
+            .filter(permission__content_type=ctype)
+            .filter(permission__codename__in=codenames))
+        if group_model.objects.is_generic():
+            fields = ['object_pk', 'permission__codename']
+        else:
+            fields = ['content_object__pk', 'permission__codename']
+        groups_obj_perms = groups_obj_perms_queryset.values_list(*fields)
         data += list(groups_obj_perms)
     keyfunc = lambda t: t[0] # sorting/grouping by pk (first in result tuple)
     data = sorted(data, key=keyfunc)
@@ -473,11 +492,16 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False):
     # we should also have ``codenames`` list
 
     # Now we should extract list of pk values for which we would filter queryset
-    groups_obj_perms = GroupObjectPermission.objects\
-        .filter(group=group)\
-        .filter(permission__content_type=ctype)\
-        .filter(permission__codename__in=codenames)\
-        .values_list('object_pk', 'permission__codename')
+    group_model = get_group_obj_perms_model(queryset.model)
+    groups_obj_perms_queryset = (group_model.objects
+        .filter(group=group)
+        .filter(permission__content_type=ctype)
+        .filter(permission__codename__in=codenames))
+    if group_model.objects.is_generic():
+        fields = ['object_pk', 'permission__codename']
+    else:
+        fields = ['content_object__pk', 'permission__codename']
+    groups_obj_perms = groups_obj_perms_queryset.values_list(*fields)
     data = list(groups_obj_perms)
 
     keyfunc = lambda t: t[0] # sorting/grouping by pk (first in result tuple)

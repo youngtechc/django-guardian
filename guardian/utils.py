@@ -145,9 +145,8 @@ class ClassProperty(property):
 
 # TODO: should raise error when multiple UserObjectPermission direct relations
 # are defined
-def get_user_obj_perms_model(obj):
-    from guardian.models import UserObjectPermissionBase
-    from guardian.models import UserObjectPermission
+
+def get_obj_perms_model(obj, base_cls, generic_cls):
     if isinstance(obj, Model):
         obj = obj.__class__
     ctype = ContentType.objects.get_for_model(obj)
@@ -159,8 +158,8 @@ def get_user_obj_perms_model(obj):
         if hasattr(attr, 'related'):
             related = attr.related
             model = getattr(related, 'model', None)
-            if (model and issubclass(model, UserObjectPermissionBase) and
-                    model is not UserObjectPermission):
+            if (model and issubclass(model, base_cls) and
+                    model is not generic_cls):
                 # if model is generic one it would be returned anyway
                 if not model.objects.is_generic():
                     # make sure that content_object's content_type is same as
@@ -168,5 +167,22 @@ def get_user_obj_perms_model(obj):
                     fk = model._meta.get_field_by_name('content_object')[0]
                     if ctype == ContentType.objects.get_for_model(fk.rel.to):
                         return model
-    return UserObjectPermission
+    return generic_cls
 
+
+def get_user_obj_perms_model(obj):
+    """
+    Returns model class that connects given ``obj`` and User class.
+    """
+    from guardian.models import UserObjectPermissionBase
+    from guardian.models import UserObjectPermission
+    return get_obj_perms_model(obj, UserObjectPermissionBase, UserObjectPermission)
+
+
+def get_group_obj_perms_model(obj):
+    """
+    Returns model class that connects given ``obj`` and Group class.
+    """
+    from guardian.models import GroupObjectPermissionBase
+    from guardian.models import GroupObjectPermission
+    return get_obj_perms_model(obj, GroupObjectPermissionBase, GroupObjectPermission)

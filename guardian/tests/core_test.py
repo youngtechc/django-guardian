@@ -42,9 +42,12 @@ class ObjectPermissionCheckerTest(ObjectPermissionTestCase):
 
             # has_perm on Checker should spawn only one query plus one extra for
             # fetching the content type first time we check for specific model
+            # and one more content type as there is additional check at
+            # get_group_obj_perms_model [ProjectGroupObjectPermission's content
+            # type is checked there]
             query_count = len(connection.queries)
             res = checker.has_perm("change_group", self.group)
-            self.assertEqual(len(connection.queries), query_count + 2)
+            self.assertEqual(len(connection.queries), query_count + 3)
 
             # Checking again shouldn't spawn any queries
             query_count = len(connection.queries)
@@ -66,12 +69,9 @@ class ObjectPermissionCheckerTest(ObjectPermissionTestCase):
 
             # Checking for permission for other model should spawn 3 queries
             # (again: content type and actual permissions for the object...
-            # and one more content type as there is additional check at
-            # get_user_obj_perms_model [ProjectUserObjectPermission's content
-            # type is checked there])
             query_count = len(connection.queries)
             checker.has_perm("change_user", self.user)
-            self.assertEqual(len(connection.queries), query_count + 3)
+            self.assertEqual(len(connection.queries), query_count + 2)
 
         finally:
             settings.DEBUG = False

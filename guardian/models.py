@@ -8,7 +8,6 @@ from django.utils.translation import ugettext_lazy as _
 from guardian.managers import UserObjectPermissionManager
 from guardian.managers import GroupObjectPermissionManager
 from guardian.utils import get_anonymous_user
-from guardian.utils import ClassProperty
 
 
 class BaseObjectPermission(models.Model):
@@ -35,16 +34,6 @@ class BaseObjectPermission(models.Model):
                 % (self.permission.content_type, content_type))
         return super(BaseObjectPermission, self).save(*args, **kwargs)
 
-    #@ClassProperty
-    #@classmethod
-    #def _unique_together_attrs(cls):
-        #first = 'user' if hasattr(cls, 'user') else 'group'
-        #if isinstance(cls.content_object, GenericForeignKey):
-            #last = 'object_pk'
-        #else:
-            #last = 'content_object'
-        #return [first, 'permission', last]
-
 
 class BaseGenericObjectPermission(models.Model):
     content_type = models.ForeignKey(ContentType)
@@ -65,12 +54,12 @@ class UserObjectPermissionBase(BaseObjectPermission):
 
     class Meta:
         abstract = True
-        # TODO: set properly unique_together
-        #unique_together = ['user', 'permission', 'object_pk']
+        unique_together = ['user', 'permission', 'content_object']
 
 
 class UserObjectPermission(UserObjectPermissionBase, BaseGenericObjectPermission):
-    pass
+    class Meta:
+        unique_together = ['user', 'permission', 'object_pk']
 
 
 class GroupObjectPermissionBase(BaseObjectPermission):
@@ -83,12 +72,12 @@ class GroupObjectPermissionBase(BaseObjectPermission):
 
     class Meta:
         abstract = True
-        # TODO: set properly unique_together
-        #unique_together = ['group', 'permission', 'object_pk']
+        unique_together = ['group', 'permission', 'content_object']
 
 
 class GroupObjectPermission(GroupObjectPermissionBase, BaseGenericObjectPermission):
-    pass
+    class Meta:
+        unique_together = ['group', 'permission', 'object_pk']
 
 
 # Prototype User and Group methods

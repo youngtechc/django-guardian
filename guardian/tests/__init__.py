@@ -5,8 +5,8 @@ from conf_test import *
 from core_test import *
 from custompkmodel_test import *
 from decorators_test import *
+from direct_rel_test import *
 from forms_test import *
-from managers_test import *
 from orphans_test import *
 from other_test import *
 from utils_test import *

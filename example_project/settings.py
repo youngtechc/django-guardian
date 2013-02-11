@@ -34,7 +34,6 @@ INSTALLED_APPS = (
     'guardian',
     'guardian.tests.testapp',
     'posts',
-    'taggit',
 )
 if 'GRAPPELLI' in os.environ:
     try:

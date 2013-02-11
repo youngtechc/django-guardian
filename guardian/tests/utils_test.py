@@ -1,3 +1,5 @@
+from mock import Mock
+from mock import patch
 from django.test import TestCase
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.models import User, Group, AnonymousUser

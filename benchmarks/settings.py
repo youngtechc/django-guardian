@@ -26,9 +26,10 @@ ANONYMOUS_USER_ID = -1
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-        'TEST_NAME': ':memory:',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'guardian_benchmarks',
+        'USER': 'guardian_bench',
+        'PASSWORD': 'guardian_bench',
     },
 }
 

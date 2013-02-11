@@ -138,11 +138,6 @@ def clean_orphan_obj_perms():
     return deleted
 
 
-class ClassProperty(property):
-    def __get__(self, cls, owner):
-        return self.fget.__get__(None, owner)()
-
-
 # TODO: should raise error when multiple UserObjectPermission direct relations
 # are defined
 
@@ -151,10 +146,7 @@ def get_obj_perms_model(obj, base_cls, generic_cls):
         obj = obj.__class__
     ctype = ContentType.objects.get_for_model(obj)
     for name in dir(obj):
-        try:
-            attr = getattr(obj, name)
-        except (ValueError, AttributeError):
-            continue
+        attr = getattr(obj, name)
         if hasattr(attr, 'related'):
             related = attr.related
             model = getattr(related, 'model', None)

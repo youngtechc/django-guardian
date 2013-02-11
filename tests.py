@@ -20,6 +20,7 @@ settings.INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.sites',
     'guardian',
+    'guardian.tests.testapp',
 )
 
 def run_tests(settings):

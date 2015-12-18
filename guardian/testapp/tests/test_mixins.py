@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.views.generic import View
+from django.views.generic.edit import CreateView
 
 from guardian.compat import get_user_model
 from guardian.compat import mock
@@ -23,12 +24,34 @@ class RemoveDatabaseView(View):
     def get(self, request, *args, **kwargs):
         raise DatabaseRemovedError("You've just allowed db to be removed!")
 
+class TestCreateView(PermissionRequiredMixin, CreateView):
+    model = Post
+
 class TestView(PermissionRequiredMixin, RemoveDatabaseView):
     permission_required = 'testapp.change_post'
     object = None # should be set at each tests explicitly
 
 class NoObjectView(PermissionRequiredMixin, RemoveDatabaseView):
     permission_required = 'testapp.change_post'
+
+class CreateViewMixins(TestCase):
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = get_user_model().objects.create_user(
+            'joe', 'joe@doe.com', 'doe')
+        self.client.login(username='joe', password='doe')
+
+    def test_we_can_meow(self):
+        """
+        This test would fail if permission is checked **after** view is
+        actually resolved.
+        """
+        request = self.factory.get('/')
+        request.user = self.user
+        view = TestCreateView.as_view(raise_exception=True)
+        with self.assertRaises(PermissionDenied):
+            view(request)
 
 class TestViewMixins(TestCase):
 

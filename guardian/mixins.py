@@ -155,8 +155,11 @@ class PermissionRequiredMixin(object):
     def get_permission_object(self):
         if self.permission_object:
             return self.permission_object
-        return (hasattr(self, 'get_object') and self.get_object()
-                or getattr(self, 'object', None))
+        pk = self.kwargs.get(self.pk_url_kwarg)
+        slug = self.kwargs.get(self.slug_url_kwarg)
+        if pk is not None or slug is not None:
+            return (hasattr(self, 'get_object') and self.get_object()
+                    or getattr(self, 'object', None))
                 
     def check_permissions(self, request):
         """

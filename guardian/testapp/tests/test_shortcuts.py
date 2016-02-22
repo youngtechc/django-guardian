@@ -533,6 +533,9 @@ class GetObjectsForUser(TestCase):
             set(objects),
             set(groups))
 
+    def test_same_permission_multiple_models(self):
+        get_objects_for_user(self.user, 'testapp.can_bark')
+
     def test_multiple_perms_to_check(self):
         group_names = ['group1', 'group2', 'group3']
         groups = [Group.objects.create(name=name) for name in group_names]

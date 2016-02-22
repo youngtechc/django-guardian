@@ -37,6 +37,9 @@ class Project(models.Model):
 
     class Meta:
         get_latest_by = 'created_at'
+        permissions = (
+            ('can_bark', 'User can bark at project'),
+        )
 
     def __unicode__(self):
         return self.name
@@ -58,6 +61,11 @@ class Mixed(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    class Meta:
+        permissions = (
+            ('can_bark', 'User can bark at Mixed'),
+        )
 
 
 class LogEntryWithGroup(LogEntry):

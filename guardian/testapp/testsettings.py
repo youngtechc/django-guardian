@@ -5,11 +5,11 @@ import environ
 
 env = environ.Env()
 
-DEBUG = False
+DEBUG = True
 
 ANONYMOUS_USER_NAME = "AnonymousUser"
 
-AUTH_USER_MODEL = "testapp.CustomUser"
+# AUTH_USER_MODEL = "testapp.CustomUser"
 GUARDIAN_MONKEY_PATCH = False
 
 INSTALLED_APPS = (

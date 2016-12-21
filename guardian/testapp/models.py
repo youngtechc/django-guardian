@@ -50,8 +50,8 @@ class Project(models.Model):
 Project.not_a_relation_descriptor = DynamicAccessor()
 
 
-class MixedGroupObjectPermission(GroupObjectPermissionBase):
-    content_object = models.ForeignKey('Mixed')
+# class MixedGroupObjectPermission(GroupObjectPermissionBase):
+#     content_object = models.ForeignKey('Mixed')
 
 
 @python_2_unicode_compatible
@@ -94,8 +94,8 @@ class NonIntPKModel(models.Model):
     char_pk = models.CharField(primary_key=True, max_length=128)
 
 
-class CustomUser(AbstractUser, GuardianUserMixin):
-    custom_id = models.AutoField(primary_key=True)
+# class CustomUser(AbstractUser, GuardianUserMixin):
+#     custom_id = models.AutoField(primary_key=True)
 
 
 class CustomUsernameUser(AbstractBaseUser, GuardianUserMixin):

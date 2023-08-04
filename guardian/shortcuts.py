@@ -29,7 +29,7 @@ from django.db.models import (
 from guardian.core import ObjectPermissionChecker
 from guardian.ctypes import get_content_type
 from guardian.exceptions import MixedContentTypeError, WrongAppError, MultipleIdentityAndObjectError
-from guardian.utils import get_anonymous_user, get_group_obj_perms_model, get_identity, get_user_obj_perms_model
+from guardian.utils import get_anonymous_user, get_group_obj_perms_model, get_identity, get_user_obj_perms_model, get_obj_perm_model_by_conf
 GroupObjectPermission = get_group_obj_perms_model()
 UserObjectPermission = get_user_obj_perms_model()
 
@@ -498,6 +498,7 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
     ctype = None
     app_label = None
     codenames = set()
+    direct_foreign_key = False
 
     # Compute codenames set and ctype if possible
     for perm in perms:
@@ -577,6 +578,8 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
     # Now we should extract list of pk values for which we would filter
     # queryset
     user_model = get_user_obj_perms_model(queryset.model)
+    direct_foreign_key = not isinstance(user_model,
+                                        get_obj_perm_model_by_conf('USER_OBJ_PERMS_MODEL'))
     user_obj_perms_queryset = filter_perms_queryset_by_objects(
         user_model.objects
         .filter(user=user)
@@ -594,6 +597,8 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
 
     if use_groups:
         group_model = get_group_obj_perms_model(queryset.model)
+        direct_foreign_key &= not isinstance(group_model,
+                                             get_obj_perm_model_by_conf('GROUP_OBJ_PERMS_MODEL'))
         group_filters = {
             'permission__content_type': ctype,
             'group__%s' % get_user_model().groups.field.related_query_name(): user,
@@ -633,7 +638,8 @@ def get_objects_for_user(user, perms, klass=None, use_groups=True, any_perm=Fals
     field_pk = user_fields[0]
     values = user_obj_perms_queryset
 
-    handle_pk_field = _handle_pk_field(queryset)
+    # Custom user and group direct FK models so mapping should be exact
+    handle_pk_field = None if direct_foreign_key else _handle_pk_field(queryset)
     if handle_pk_field is not None:
         values = values.annotate(obj_pk=handle_pk_field(expression=field_pk))
         field_pk = 'obj_pk'
@@ -714,6 +720,7 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False, accept_globa
     ctype = None
     app_label = None
     codenames = set()
+    direct_foreign_key = False
 
     # Compute codenames set and ctype if possible
     for perm in perms:
@@ -768,6 +775,8 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False, accept_globa
     # Now we should extract list of pk values for which we would filter
     # queryset
     group_model = get_group_obj_perms_model(queryset.model)
+    direct_foreign_key = not isinstance(group_model,
+                                        get_obj_perm_model_by_conf('GROUP_OBJ_PERMS_MODEL'))
     groups_obj_perms_queryset = filter_perms_queryset_by_objects(
         group_model.objects
         .filter(group=group)
@@ -797,7 +806,8 @@ def get_objects_for_group(group, perms, klass=None, any_perm=False, accept_globa
     field_pk = fields[0]
     values = groups_obj_perms_queryset
 
-    handle_pk_field = _handle_pk_field(queryset)
+    # Custom user and group direct FK models so mapping should be exact
+    handle_pk_field = None if direct_foreign_key else _handle_pk_field(queryset)
     if handle_pk_field is not None:
         values = values.annotate(obj_pk=handle_pk_field(expression=field_pk))
         field_pk = 'obj_pk'
